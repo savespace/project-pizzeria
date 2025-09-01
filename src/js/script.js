@@ -100,10 +100,12 @@ const select = {
       thisProduct.accordionTrigger.addEventListener('click', function(event) {
         event.preventDefault();
 
-        const activeProduct = document.querySelector('.' + classNames.menuProduct.wrapperActive);
+        const activeProducts = document.querySelectorAll('.' + classNames.menuProduct.wrapperActive);
 
-        if(activeProduct && activeProduct !== thisProduct.element) {
-          activeProduct.classList.remove(classNames.menuProduct.wrapperActive);
+        for (let activeProduct of activeProducts) {
+          if (activeProduct !== thisProduct.element) {
+            activeProduct.classList.remove(classNames.menuProduct.wrapperActive);
+          }
         }
 
         thisProduct.element.classList.toggle(classNames.menuProduct.wrapperActive);
