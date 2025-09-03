@@ -225,6 +225,7 @@ const templates = {
     thisProduct.dom.cartButton.addEventListener('click', function(event){
       event.preventDefault();
       thisProduct.processOrder();
+      thisProduct.addToCart();
     });
   }
 
@@ -238,44 +239,75 @@ const templates = {
   }
 
 processOrder(){
-  const thisProduct = this;
-  console.log('processOrder');
+    const thisProduct = this;
+    const formData = utils.serializeFormToObject(thisProduct.dom.form);
+    let price = parseFloat(thisProduct.data.price);
 
-  const formData = utils.serializeFormToObject(thisProduct.dom.form);
-  console.log('formData', formData);
+    for(let paramId in thisProduct.data.params) {
+      const param = thisProduct.data.params[paramId];
+      for(let optionId in param.options) {
+        const option = param.options[optionId];
+        const optionSelected = formData[paramId] && formData[paramId].includes(optionId);
 
-  let price = parseFloat(thisProduct.data.price);
+        if(optionSelected && !option.default) price += option.price;
+        else if(!optionSelected && option.default) price -= option.price;
 
-  for(let paramId in thisProduct.data.params) {
-    const param = thisProduct.data.params[paramId];
-
-    for(let optionId in param.options) {
-      const option = param.options[optionId];
-
-      const optionSelected = formData[paramId] && formData[paramId].includes(optionId);
-
-      if(optionSelected && !option.default) {
-        price += option.price;
-      }
-
-      else if(!optionSelected && option.default) {
-        price -= option.price;
-      }
-
-      const optionImage = thisProduct.dom.imageWrapper.querySelector('.' + paramId + '-' + optionId);
-
-      if(optionImage){
-        if(optionSelected){
-          optionImage.classList.add(classNames.menuProduct.imageVisible);
-        } else {
-          optionImage.classList.remove(classNames.menuProduct.imageVisible);
+        const optionImage = thisProduct.dom.imageWrapper.querySelector('.' + paramId + '-' + optionId);
+        if(optionImage){
+          if(optionSelected) optionImage.classList.add(classNames.menuProduct.imageVisible);
+          else optionImage.classList.remove(classNames.menuProduct.imageVisible);
         }
       }
     }
-  }
 
+  thisProduct.priceSingle = price;
   price *= thisProduct.amountWidget.value;
   thisProduct.dom.priceElem.innerHTML = price;
+}
+
+    prepareCartProduct(){
+    const thisProduct = this;
+    const productSummary = {};
+
+    productSummary.id = thisProduct.id;
+    productSummary.name = thisProduct.data.name;
+    productSummary.amount = thisProduct.amountWidget.value;
+    productSummary.priceSingle = thisProduct.priceSingle;
+    productSummary.price = thisProduct.priceSingle * thisProduct.amountWidget.value;
+    productSummary.params = thisProduct.prepareCartProductParams();
+
+    return productSummary;
+  }
+
+  prepareCartProductParams(){
+    const thisProduct = this;
+    const formData = utils.serializeFormToObject(thisProduct.dom.form);
+    const params = {};
+
+    for(let paramId in thisProduct.data.params){
+      const param = thisProduct.data.params[paramId];
+
+      params[paramId] = {
+        label: param.label,
+        options: {}
+      };
+
+      for(let optionId in param.options){
+        const option = param.options[optionId];
+        const optionSelected = formData[paramId] && formData[paramId].includes(optionId);
+
+        if(optionSelected){
+          params[paramId].options[optionId] = option.label;
+        }
+      }
+    }
+
+    return params;
+  }
+
+  addToCart(){
+    const thisProduct = this;
+    app.cart.add(thisProduct.prepareCartProduct());
   }
 }
 
@@ -313,6 +345,14 @@ class Cart {
     });
   }
 
+  add(menuProduct){
+    const thisCart = this;
+    thisCart.products.push(menuProduct);
+    const generatedHTML = templates.cartProduct(menuProduct);
+    const generatedDOM = utils.createDOMFromHTML(generatedHTML);
+    thisCart.dom.productList.appendChild(generatedDOM);
+    console.log('Product added to DOM:', generatedDOM);
+  }
 }
 
   const app = {
